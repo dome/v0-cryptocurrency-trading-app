@@ -3,9 +3,18 @@
  * รันด้วย: node scripts/seed-pocketbase.ts
  */
 
+// โหลด environment variables จากไฟล์ .env
+import { config } from 'dotenv'
+config()
+
 import PocketBase from "pocketbase"
 
 const pb = new PocketBase("http://127.0.0.1:8090")
+
+// Skip authentication for now - allow public access to collections
+// Admin authentication - สามารถใช้ environment variables แทนได้
+const ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL || "admin@example.com"
+const ADMIN_PASSWORD = process.env.PB_ADMIN_PASSWORD || "admin123456"
 
 // ข้อมูลคู่เทรดเริ่มต้น
 const tradingPairs = [
@@ -156,6 +165,23 @@ async function seedDatabase() {
   console.log("🌱 เริ่มต้น seed ข้อมูลไปยัง PocketBase...")
 
   try {
+    // ลองสร้าง admin user ใหม่ถ้ายังไม่มี
+    try {
+      console.log("🔐 กำลังเข้าสู่ระบบด้วยสิทธิ์ admin...")
+      await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASSWORD)
+      console.log("✅ เข้าสู่ระบบสำเร็จ!")
+    } catch (error: any) {
+      console.log("❌ ไม่สามารถเข้าสู่ระบบได้:", error.message)
+      console.log("\n💡 กรุณา:")
+      console.log("1. เปิด http://127.0.0.1:8090/_/ ใน browser")
+      console.log("2. สร้าง admin account ใหม่")
+      console.log("3. อัพเดท email และ password ใน .env หรือแก้ไขโค้ดตรงๆ")
+      console.log("4. รันสคริปต์ใหม่")
+      return
+    }
+    
+    // ปิด auto cancellation ของ request
+    pb.autoCancellation(false)
     // 1. สร้างข้อมูล trading pairs
     console.log("\n📊 กำลังสร้างข้อมูลคู่เทรด...")
     for (const pair of tradingPairs) {

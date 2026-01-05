@@ -1,230 +1,595 @@
 [
   {
+    "id": "trading_pairs_collection",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": "",
     "name": "trading_pairs",
     "type": "base",
-    "schema": [
+    "fields": [
       {
+        "id": "text_field_id",
         "name": "symbol",
         "type": "text",
         "required": true,
-        "unique": true
+        "unique": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
       },
       {
+        "id": "text_field_base_asset",
         "name": "base_asset",
         "type": "text",
-        "required": true
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 20,
+        "pattern": ""
       },
       {
+        "id": "text_field_quote_asset",
         "name": "quote_asset",
         "type": "text",
-        "required": true
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 20,
+        "pattern": ""
       },
       {
+        "id": "number_field_last_price",
         "name": "last_price",
         "type": "number",
-        "required": true
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
+        "id": "number_field_price_change",
         "name": "price_change",
-        "type": "number"
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
+        "id": "number_field_price_change_percent",
         "name": "price_change_percent",
-        "type": "number"
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
+        "id": "number_field_volume_24h",
         "name": "volume_24h",
-        "type": "number"
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
+        "id": "number_field_high_24h",
         "name": "high_24h",
-        "type": "number"
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
+        "id": "number_field_low_24h",
         "name": "low_24h",
-        "type": "number"
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
+        "id": "bool_field_is_active",
         "name": "is_active",
-        "type": "bool"
+        "type": "bool",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "default": true
+      },
+      {
+        "id": "autodate_field_created",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "autodate_field_updated",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": true
       }
     ],
-    "indexes": ["CREATE UNIQUE INDEX idx_symbol ON trading_pairs (symbol)"]
+    "indexes": ["CREATE UNIQUE INDEX `idx_symbol_trading_pairs` ON `trading_pairs` (`symbol`)"],
+    "system": false
   },
   {
+    "id": "candles_collection",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": "",
     "name": "candles",
     "type": "base",
-    "schema": [
+    "fields": [
       {
-        "name": "symbol",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "timeframe",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "timestamp",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "open",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "high",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "low",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "close",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "volume",
-        "type": "number",
-        "required": true
-      }
-    ],
-    "indexes": [
-      "CREATE INDEX idx_candles_symbol ON candles (symbol)",
-      "CREATE INDEX idx_candles_timestamp ON candles (timestamp)",
-      "CREATE UNIQUE INDEX idx_candles_unique ON candles (symbol, timeframe, timestamp)"
-    ]
-  },
-  {
-    "name": "orders",
-    "type": "base",
-    "schema": [
-      {
-        "name": "symbol",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "side",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "type",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "price",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "amount",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "filled",
-        "type": "number"
-      },
-      {
-        "name": "status",
-        "type": "text"
-      },
-      {
-        "name": "user_id",
-        "type": "text"
-      }
-    ],
-    "indexes": [
-      "CREATE INDEX idx_orders_symbol ON orders (symbol)",
-      "CREATE INDEX idx_orders_status ON orders (status)",
-      "CREATE INDEX idx_orders_orderbook ON orders (symbol, status, side, price)"
-    ]
-  },
-  {
-    "name": "trades",
-    "type": "base",
-    "schema": [
-      {
-        "name": "symbol",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "price",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "amount",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "side",
-        "type": "text",
-        "required": true
-      },
-      {
-        "name": "timestamp",
-        "type": "number",
-        "required": true
-      },
-      {
-        "name": "buyer_order_id",
-        "type": "text"
-      },
-      {
-        "name": "seller_order_id",
-        "type": "text"
-      }
-    ],
-    "indexes": [
-      "CREATE INDEX idx_trades_symbol ON trades (symbol)",
-      "CREATE INDEX idx_trades_timestamp ON trades (timestamp)",
-      "CREATE INDEX idx_trades_symbol_time ON trades (symbol, timestamp)"
-    ]
-  },
-  {
-    "name": "tickers",
-    "type": "base",
-    "schema": [
-      {
+        "id": "text_field_symbol",
         "name": "symbol",
         "type": "text",
         "required": true,
-        "unique": true
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
       },
       {
-        "name": "bid_price",
-        "type": "number"
+        "id": "text_field_timeframe",
+        "name": "timeframe",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 10,
+        "pattern": ""
       },
       {
-        "name": "ask_price",
-        "type": "number"
+        "id": "number_field_timestamp",
+        "name": "timestamp",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
-        "name": "last_price",
-        "type": "number"
+        "id": "number_field_open",
+        "name": "open",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
-        "name": "volume_24h",
-        "type": "number"
+        "id": "number_field_high",
+        "name": "high",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
       },
       {
-        "name": "updated_at",
-        "type": "number"
+        "id": "number_field_low",
+        "name": "low",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_close",
+        "name": "close",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_volume",
+        "name": "volume",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "autodate_field_created",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "autodate_field_updated",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": true
       }
     ],
-    "indexes": ["CREATE UNIQUE INDEX idx_tickers_symbol ON tickers (symbol)"]
+    "indexes": [
+      "CREATE INDEX `idx_candles_symbol` ON `candles` (`symbol`)",
+      "CREATE INDEX `idx_candles_timestamp` ON `candles` (`timestamp`)",
+      "CREATE UNIQUE INDEX `idx_candles_unique` ON `candles` (`symbol`, `timeframe`, `timestamp`)"
+    ],
+    "system": false
+  },
+  {
+    "id": "orders_collection",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": "",
+    "name": "orders",
+    "type": "base",
+    "fields": [
+      {
+        "id": "text_field_symbol",
+        "name": "symbol",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
+      },
+      {
+        "id": "text_field_side",
+        "name": "side",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 10,
+        "pattern": ""
+      },
+      {
+        "id": "text_field_type",
+        "name": "type",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 10,
+        "pattern": ""
+      },
+      {
+        "id": "number_field_price",
+        "name": "price",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_amount",
+        "name": "amount",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_filled",
+        "name": "filled",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "default": 0
+      },
+      {
+        "id": "text_field_status",
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 20,
+        "pattern": "",
+        "default": "OPEN"
+      },
+      {
+        "id": "text_field_user_id",
+        "name": "user_id",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
+      },
+      {
+        "id": "autodate_field_created",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "autodate_field_updated",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": true
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX `idx_orders_symbol` ON `orders` (`symbol`)",
+      "CREATE INDEX `idx_orders_status` ON `orders` (`status`)",
+      "CREATE INDEX `idx_orders_orderbook` ON `orders` (`symbol`, `status`, `side`, `price`)"
+    ],
+    "system": false
+  },
+  {
+    "id": "trades_collection",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": "",
+    "name": "trades",
+    "type": "base",
+    "fields": [
+      {
+        "id": "text_field_symbol",
+        "name": "symbol",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
+      },
+      {
+        "id": "number_field_price",
+        "name": "price",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_amount",
+        "name": "amount",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "text_field_side",
+        "name": "side",
+        "type": "text",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 10,
+        "pattern": ""
+      },
+      {
+        "id": "number_field_timestamp",
+        "name": "timestamp",
+        "type": "number",
+        "required": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "text_field_buyer_order_id",
+        "name": "buyer_order_id",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
+      },
+      {
+        "id": "text_field_seller_order_id",
+        "name": "seller_order_id",
+        "type": "text",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
+      },
+      {
+        "id": "autodate_field_created",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "autodate_field_updated",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": true
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX `idx_trades_symbol` ON `trades` (`symbol`)",
+      "CREATE INDEX `idx_trades_timestamp` ON `trades` (`timestamp`)",
+      "CREATE INDEX `idx_trades_symbol_time` ON `trades` (`symbol`, `timestamp`)"
+    ],
+    "system": false
+  },
+  {
+    "id": "tickers_collection",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": "",
+    "name": "tickers",
+    "type": "base",
+    "fields": [
+      {
+        "id": "text_field_symbol",
+        "name": "symbol",
+        "type": "text",
+        "required": true,
+        "unique": true,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "min": 1,
+        "max": 50,
+        "pattern": ""
+      },
+      {
+        "id": "number_field_bid_price",
+        "name": "bid_price",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_ask_price",
+        "name": "ask_price",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_last_price",
+        "name": "last_price",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_volume_24h",
+        "name": "volume_24h",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "number_field_updated_at",
+        "name": "updated_at",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false
+      },
+      {
+        "id": "autodate_field_created",
+        "name": "created",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": false
+      },
+      {
+        "id": "autodate_field_updated",
+        "name": "updated",
+        "type": "autodate",
+        "required": false,
+        "presentable": false,
+        "hidden": false,
+        "system": false,
+        "onCreate": true,
+        "onUpdate": true
+      }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX `idx_tickers_symbol` ON `tickers` (`symbol`)"],
+    "system": false
   }
 ]
