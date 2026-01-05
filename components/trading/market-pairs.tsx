@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { tradingPairs } from "@/lib/mock-data"
+import { getPocketBase, type TradingPair } from "@/lib/pocketbase"
 import { Search, Star } from "lucide-react"
 
 interface MarketPairsProps {
@@ -14,11 +14,45 @@ interface MarketPairsProps {
 export function MarketPairs({ selectedPair, onSelectPair }: MarketPairsProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [filter, setFilter] = useState<"all" | "favorites">("all")
+  const [pairs, setPairs] = useState<TradingPair[]>([])
 
-  const filteredPairs = tradingPairs.filter((pair) => {
+  useEffect(() => {
+    const pb = getPocketBase()
+
+    async function loadPairs() {
+      try {
+        const pairsList = await pb.collection("trading_pairs").getFullList<TradingPair>({
+          filter: "is_active = true",
+          sort: "-volume_24h",
+        })
+        setPairs(pairsList)
+      } catch (error) {
+        console.error("[v0] Error loading trading pairs:", error)
+      }
+    }
+
+    loadPairs()
+
+    pb.collection("trading_pairs").subscribe("*", (e) => {
+      const updatedPair = e.record as TradingPair
+      if (e.action === "create") {
+        setPairs((prev) => [...prev, updatedPair])
+      } else if (e.action === "update") {
+        setPairs((prev) => prev.map((p) => (p.id === updatedPair.id ? updatedPair : p)))
+      } else if (e.action === "delete") {
+        setPairs((prev) => prev.filter((p) => p.id !== updatedPair.id))
+      }
+    })
+
+    return () => {
+      pb.collection("trading_pairs").unsubscribe("*")
+    }
+  }, [])
+
+  const filteredPairs = pairs.filter((pair) => {
     const matchesSearch =
       pair.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      pair.baseAsset.toLowerCase().includes(searchQuery.toLowerCase())
+      pair.base_asset.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesSearch
   })
 
@@ -66,7 +100,7 @@ export function MarketPairs({ selectedPair, onSelectPair }: MarketPairsProps) {
       <div className="flex-1 overflow-y-auto">
         {filteredPairs.map((pair) => (
           <button
-            key={pair.symbol}
+            key={pair.id || pair.symbol}
             onClick={() => onSelectPair(pair.symbol)}
             className={`w-full grid grid-cols-3 gap-2 px-3 py-2.5 text-xs hover:bg-slate-800/50 transition-colors ${
               selectedPair === pair.symbol ? "bg-slate-800" : ""
@@ -75,23 +109,23 @@ export function MarketPairs({ selectedPair, onSelectPair }: MarketPairsProps) {
             <div className="text-left">
               <div className="flex items-center gap-1.5">
                 <Star className="h-3 w-3 text-slate-600 hover:text-amber-500 transition-colors" />
-                <span className="text-slate-200 font-medium">{pair.baseAsset}</span>
-                <span className="text-slate-500">/{pair.quoteAsset}</span>
+                <span className="text-slate-200 font-medium">{pair.base_asset}</span>
+                <span className="text-slate-500">/{pair.quote_asset}</span>
               </div>
               <div className="text-slate-600 text-[10px] mt-0.5">5x</div>
             </div>
             <div className="text-right">
-              <div className={`font-mono ${pair.priceChangePercent >= 0 ? "text-green-500" : "text-red-500"}`}>
-                {pair.lastPrice.toLocaleString("en-US", {
+              <div className={`font-mono ${pair.price_change_percent >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {pair.last_price.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: pair.lastPrice < 1 ? 5 : 2,
+                  maximumFractionDigits: pair.last_price < 1 ? 5 : 2,
                 })}
               </div>
             </div>
             <div className="text-right">
-              <div className={`font-medium ${pair.priceChangePercent >= 0 ? "text-green-500" : "text-red-500"}`}>
-                {pair.priceChangePercent >= 0 ? "+" : ""}
-                {pair.priceChangePercent.toFixed(2)}%
+              <div className={`font-medium ${pair.price_change_percent >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {pair.price_change_percent >= 0 ? "+" : ""}
+                {pair.price_change_percent.toFixed(2)}%
               </div>
             </div>
           </button>

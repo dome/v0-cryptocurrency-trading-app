@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { generateCandlestickData, type CandlestickData, tradingPairs } from "@/lib/mock-data"
+import { getPocketBase, type Candle, type TradingPair } from "@/lib/pocketbase"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, BarChart3 } from "lucide-react"
 
@@ -11,39 +11,60 @@ interface TradingChartProps {
 }
 
 export function TradingChart({ symbol }: TradingChartProps) {
-  const pair = tradingPairs.find((p) => p.symbol === symbol) || tradingPairs[0]
-  const [chartData, setChartData] = useState<CandlestickData[]>([])
-  const [interval, setInterval] = useState("15m")
+  const [chartData, setChartData] = useState<Candle[]>([])
+  const [pair, setPair] = useState<TradingPair | null>(null)
+  const [timeframe, setTimeframe] = useState("15m")
   const [chartType, setChartType] = useState<"candlestick" | "line">("candlestick")
 
   useEffect(() => {
-    // TODO: Replace with PocketBase real-time subscription for chart data
-    const data = generateCandlestickData(pair.lastPrice)
-    setChartData(data)
+    const pb = getPocketBase()
 
-    const updateInterval = setInterval(() => {
-      setChartData((prev) => {
-        const newData = [...prev]
-        const lastCandle = newData[newData.length - 1]
-        const change = (Math.random() - 0.5) * pair.lastPrice * 0.01
+    async function loadChartData() {
+      try {
+        // Get trading pair info
+        const pairData = await pb.collection("trading_pairs").getFirstListItem<TradingPair>(`symbol="${symbol}"`)
+        setPair(pairData)
 
-        newData[newData.length - 1] = {
-          ...lastCandle,
-          close: lastCandle.close + change,
-          high: Math.max(lastCandle.high, lastCandle.close + change),
-          low: Math.min(lastCandle.low, lastCandle.close + change),
-          volume: lastCandle.volume + Math.random() * 10000,
+        // Get candles data
+        const candles = await pb.collection("candles").getFullList<Candle>({
+          filter: `symbol="${symbol}" && timeframe="${timeframe}"`,
+          sort: "timestamp",
+          limit: 100,
+        })
+        setChartData(candles)
+      } catch (error) {
+        console.error("[v0] Error loading chart data:", error)
+      }
+    }
+
+    loadChartData()
+
+    pb.collection("candles").subscribe("*", (e) => {
+      const candle = e.record as Candle
+      if (candle.symbol === symbol && candle.timeframe === timeframe) {
+        if (e.action === "create") {
+          setChartData((prev) => [...prev, candle])
+        } else if (e.action === "update") {
+          setChartData((prev) => prev.map((c) => (c.id === candle.id ? candle : c)))
         }
+      }
+    })
 
-        return newData
-      })
-    }, 3000)
+    // Subscribe to pair updates
+    pb.collection("trading_pairs").subscribe("*", (e) => {
+      if (e.record.symbol === symbol) {
+        setPair(e.record as TradingPair)
+      }
+    })
 
-    return () => clearInterval(updateInterval)
-  }, [pair.lastPrice, symbol])
+    return () => {
+      pb.collection("candles").unsubscribe("*")
+      pb.collection("trading_pairs").unsubscribe("*")
+    }
+  }, [symbol, timeframe])
 
   const chartDisplayData = chartData.map((d) => ({
-    time: new Date(d.time).toLocaleTimeString("th-TH", {
+    time: new Date(d.timestamp).toLocaleTimeString("th-TH", {
       hour: "2-digit",
       minute: "2-digit",
     }),
@@ -83,8 +104,8 @@ export function TradingChart({ symbol }: TradingChartProps) {
               key={int}
               variant="ghost"
               size="sm"
-              className={`text-xs px-2 ${interval === int ? "bg-slate-800 text-slate-50" : "text-slate-400"}`}
-              onClick={() => setInterval(int)}
+              className={`text-xs px-2 ${timeframe === int ? "bg-slate-800 text-slate-50" : "text-slate-400"}`}
+              onClick={() => setTimeframe(int)}
             >
               {int}
             </Button>
@@ -104,14 +125,14 @@ export function TradingChart({ symbol }: TradingChartProps) {
           </span>
           <span className="text-xs text-slate-500 ml-3">High</span>
           <span className="text-sm text-green-500 font-mono">
-            {Math.max(...chartData.map((d) => d.high)).toLocaleString("en-US", {
+            {Math.max(...chartData.map((d) => d.high), 0).toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </span>
           <span className="text-xs text-slate-500 ml-3">Low</span>
           <span className="text-sm text-red-500 font-mono">
-            {Math.min(...chartData.map((d) => d.low)).toLocaleString("en-US", {
+            {Math.min(...chartData.map((d) => d.low), Number.MAX_VALUE).toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -123,11 +144,17 @@ export function TradingChart({ symbol }: TradingChartProps) {
               maximumFractionDigits: 2,
             })}
           </span>
-          <span className="text-xs text-slate-500 ml-3">Change</span>
-          <span className={`text-sm font-mono ${pair.priceChangePercent >= 0 ? "text-green-500" : "text-red-500"}`}>
-            {pair.priceChangePercent >= 0 ? "+" : ""}
-            {pair.priceChangePercent.toFixed(2)}%
-          </span>
+          {pair && (
+            <>
+              <span className="text-xs text-slate-500 ml-3">Change</span>
+              <span
+                className={`text-sm font-mono ${pair.price_change_percent >= 0 ? "text-green-500" : "text-red-500"}`}
+              >
+                {pair.price_change_percent >= 0 ? "+" : ""}
+                {pair.price_change_percent.toFixed(2)}%
+              </span>
+            </>
+          )}
         </div>
       </div>
 

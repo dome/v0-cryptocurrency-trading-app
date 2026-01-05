@@ -1,34 +1,90 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { generateOrderBook, type OrderBookEntry } from "@/lib/mock-data"
-import { tradingPairs } from "@/lib/mock-data"
+import { getPocketBase, type Order } from "@/lib/pocketbase"
 
 interface OrderBookProps {
   symbol: string
 }
 
+interface OrderBookEntry {
+  price: number
+  amount: number
+  total: number
+}
+
 export function OrderBook({ symbol }: OrderBookProps) {
-  const pair = tradingPairs.find((p) => p.symbol === symbol) || tradingPairs[0]
-  const [orderBook, setOrderBook] = useState<{ bids: OrderBookEntry[]; asks: OrderBookEntry[] }>({
-    bids: [],
-    asks: [],
-  })
+  const [bids, setBids] = useState<OrderBookEntry[]>([])
+  const [asks, setAsks] = useState<OrderBookEntry[]>([])
+  const [currentPrice, setCurrentPrice] = useState(0)
 
   useEffect(() => {
-    // Initial data
-    setOrderBook(generateOrderBook(pair.lastPrice))
+    const pb = getPocketBase()
 
-    // TODO: Replace with PocketBase real-time subscription
-    const interval = setInterval(() => {
-      setOrderBook(generateOrderBook(pair.lastPrice * (1 + (Math.random() - 0.5) * 0.001)))
-    }, 2000)
+    async function loadOrderBook() {
+      try {
+        // Get current price from trading_pairs
+        const pair = await pb.collection("trading_pairs").getFirstListItem(`symbol="${symbol}"`)
+        setCurrentPrice(pair.last_price)
 
-    return () => clearInterval(interval)
-  }, [pair.lastPrice, symbol])
+        // Get buy orders (bids)
+        const buyOrders = await pb.collection("orders").getFullList<Order>({
+          filter: `symbol="${symbol}" && status="OPEN" && side="BUY"`,
+          sort: "-price",
+          limit: 20,
+        })
 
-  const maxBidTotal = Math.max(...orderBook.bids.slice(0, 15).map((b) => b.total))
-  const maxAskTotal = Math.max(...orderBook.asks.slice(0, 15).map((a) => a.total))
+        // Get sell orders (asks)
+        const sellOrders = await pb.collection("orders").getFullList<Order>({
+          filter: `symbol="${symbol}" && status="OPEN" && side="SELL"`,
+          sort: "+price",
+          limit: 20,
+        })
+
+        // Convert to OrderBookEntry format
+        const bidsData = buyOrders.map((order) => ({
+          price: order.price,
+          amount: order.amount - order.filled,
+          total: order.price * (order.amount - order.filled),
+        }))
+
+        const asksData = sellOrders.map((order) => ({
+          price: order.price,
+          amount: order.amount - order.filled,
+          total: order.price * (order.amount - order.filled),
+        }))
+
+        setBids(bidsData)
+        setAsks(asksData)
+      } catch (error) {
+        console.error("[v0] Error loading order book:", error)
+      }
+    }
+
+    loadOrderBook()
+
+    pb.collection("orders").subscribe("*", (e) => {
+      const order = e.record as Order
+      if (order.symbol === symbol && order.status === "OPEN") {
+        loadOrderBook() // Reload order book when there's an update
+      }
+    })
+
+    // Subscribe to price updates
+    pb.collection("trading_pairs").subscribe("*", (e) => {
+      if (e.record.symbol === symbol) {
+        setCurrentPrice(e.record.last_price)
+      }
+    })
+
+    return () => {
+      pb.collection("orders").unsubscribe("*")
+      pb.collection("trading_pairs").unsubscribe("*")
+    }
+  }, [symbol])
+
+  const maxBidTotal = Math.max(...bids.slice(0, 15).map((b) => b.total), 1)
+  const maxAskTotal = Math.max(...asks.slice(0, 15).map((a) => a.total), 1)
 
   return (
     <div className="h-full flex flex-col">
@@ -47,7 +103,7 @@ export function OrderBook({ symbol }: OrderBookProps) {
       {/* Asks (Sell Orders) */}
       <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col-reverse">
-          {orderBook.asks.slice(0, 12).map((ask, index) => (
+          {asks.slice(0, 12).map((ask, index) => (
             <div key={`ask-${index}`} className="relative group hover:bg-slate-800/30 transition-colors">
               <div
                 className="absolute right-0 top-0 bottom-0 bg-red-950/20"
@@ -73,18 +129,18 @@ export function OrderBook({ symbol }: OrderBookProps) {
         <div className="py-3 px-3 border-y border-slate-800 bg-slate-900">
           <div className="flex items-center justify-between">
             <span className="text-lg font-bold text-green-500">
-              {pair.lastPrice.toLocaleString("en-US", {
+              {currentPrice.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
-            <span className="text-xs text-slate-500">≈ ${pair.lastPrice.toFixed(2)}</span>
+            <span className="text-xs text-slate-500">≈ ${currentPrice.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Bids (Buy Orders) */}
         <div>
-          {orderBook.bids.slice(0, 12).map((bid, index) => (
+          {bids.slice(0, 12).map((bid, index) => (
             <div key={`bid-${index}`} className="relative group hover:bg-slate-800/30 transition-colors">
               <div
                 className="absolute right-0 top-0 bottom-0 bg-green-950/20"

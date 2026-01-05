@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getCurrentUser, type User } from "@/lib/auth"
-import { tradingPairs } from "@/lib/mock-data"
+import { getPocketBase, type TradingPair, type Order } from "@/lib/pocketbase"
 import { useToast } from "@/hooks/use-toast"
 
 interface TradingFormProps {
@@ -16,44 +15,110 @@ interface TradingFormProps {
 
 export function TradingForm({ symbol }: TradingFormProps) {
   const { toast } = useToast()
-  const pair = tradingPairs.find((p) => p.symbol === symbol) || tradingPairs[0]
-  const [user, setUser] = useState<User | null>(null)
+  const [pair, setPair] = useState<TradingPair | null>(null)
   const [buyAmount, setBuyAmount] = useState("")
-  const [buyPrice, setBuyPrice] = useState(pair.lastPrice.toString())
+  const [buyPrice, setBuyPrice] = useState("")
   const [sellAmount, setSellAmount] = useState("")
-  const [sellPrice, setSellPrice] = useState(pair.lastPrice.toString())
+  const [sellPrice, setSellPrice] = useState("")
   const [orderType, setOrderType] = useState<"limit" | "market">("limit")
 
   useEffect(() => {
-    setUser(getCurrentUser())
-  }, [])
+    const pb = getPocketBase()
 
-  useEffect(() => {
-    setBuyPrice(pair.lastPrice.toString())
-    setSellPrice(pair.lastPrice.toString())
-  }, [pair.lastPrice])
+    async function loadPair() {
+      try {
+        const pairData = await pb.collection("trading_pairs").getFirstListItem<TradingPair>(`symbol="${symbol}"`)
+        setPair(pairData)
+        setBuyPrice(pairData.last_price.toString())
+        setSellPrice(pairData.last_price.toString())
+      } catch (error) {
+        console.error("[v0] Error loading pair:", error)
+      }
+    }
 
-  const handleBuy = (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: Integrate with PocketBase to save order
-    toast({
-      title: "คำสั่งซื้อสำเร็จ",
-      description: `ซื้อ ${buyAmount} ${pair.baseAsset} ที่ราคา ${buyPrice} USDT`,
-      variant: "default",
+    loadPair()
+
+    pb.collection("trading_pairs").subscribe("*", (e) => {
+      if (e.record.symbol === symbol) {
+        const updatedPair = e.record as TradingPair
+        setPair(updatedPair)
+      }
     })
-    setBuyAmount("")
+
+    return () => {
+      pb.collection("trading_pairs").unsubscribe("*")
+    }
+  }, [symbol])
+
+  const handleBuy = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pair) return
+
+    const pb = getPocketBase()
+
+    try {
+      const orderData: Partial<Order> = {
+        symbol: pair.symbol,
+        side: "BUY",
+        type: orderType === "limit" ? "LIMIT" : "MARKET",
+        price: orderType === "limit" ? Number.parseFloat(buyPrice) : pair.last_price,
+        amount: Number.parseFloat(buyAmount),
+        filled: 0,
+        status: "OPEN",
+      }
+
+      await pb.collection("orders").create(orderData)
+
+      toast({
+        title: "คำสั่งซื้อสำเร็จ",
+        description: `ซื้อ ${buyAmount} ${pair.base_asset} ที่ราคา ${orderType === "limit" ? buyPrice : pair.last_price} USDT`,
+      })
+      setBuyAmount("")
+    } catch (error) {
+      console.error("[v0] Error creating buy order:", error)
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถสร้างคำสั่งซื้อได้",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleSell = (e: React.FormEvent) => {
+  const handleSell = async (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Integrate with PocketBase to save order
-    toast({
-      title: "คำสั่งขายสำเร็จ",
-      description: `ขาย ${sellAmount} ${pair.baseAsset} ที่ราคา ${sellPrice} USDT`,
-      variant: "default",
-    })
-    setSellAmount("")
+    if (!pair) return
+
+    const pb = getPocketBase()
+
+    try {
+      const orderData: Partial<Order> = {
+        symbol: pair.symbol,
+        side: "SELL",
+        type: orderType === "limit" ? "LIMIT" : "MARKET",
+        price: orderType === "limit" ? Number.parseFloat(sellPrice) : pair.last_price,
+        amount: Number.parseFloat(sellAmount),
+        filled: 0,
+        status: "OPEN",
+      }
+
+      await pb.collection("orders").create(orderData)
+
+      toast({
+        title: "คำสั่งขายสำเร็จ",
+        description: `ขาย ${sellAmount} ${pair.base_asset} ที่ราคา ${orderType === "limit" ? sellPrice : pair.last_price} USDT`,
+      })
+      setSellAmount("")
+    } catch (error) {
+      console.error("[v0] Error creating sell order:", error)
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถสร้างคำสั่งขายได้",
+        variant: "destructive",
+      })
+    }
   }
+
+  if (!pair) return null
 
   const buyTotal = (Number.parseFloat(buyAmount) || 0) * (Number.parseFloat(buyPrice) || 0)
   const sellTotal = (Number.parseFloat(sellAmount) || 0) * (Number.parseFloat(sellPrice) || 0)
@@ -80,11 +145,7 @@ export function TradingForm({ symbol }: TradingFormProps) {
             {/* Buy Form */}
             <form onSubmit={handleBuy} className="flex flex-col">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-slate-300">ซื้อ {pair.baseAsset}</span>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>ยอดคงเหลือ:</span>
-                  <span className="text-slate-300 font-mono">{user?.balance.USDT?.toLocaleString() || "0"} USDT</span>
-                </div>
+                <span className="text-sm font-medium text-slate-300">ซื้อ {pair.base_asset}</span>
               </div>
 
               <div className="flex gap-1 mb-3">
@@ -143,28 +204,9 @@ export function TradingForm({ symbol }: TradingFormProps) {
                       required
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                      {pair.baseAsset}
+                      {pair.base_asset}
                     </span>
                   </div>
-                </div>
-
-                <div className="flex gap-1">
-                  {[25, 50, 75, 100].map((percent) => (
-                    <Button
-                      key={percent}
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 text-xs bg-slate-800 hover:bg-slate-700"
-                      onClick={() => {
-                        const available = user?.balance.USDT || 0
-                        const amount = (available * (percent / 100)) / Number.parseFloat(buyPrice)
-                        setBuyAmount(amount.toFixed(5))
-                      }}
-                    >
-                      {percent}%
-                    </Button>
-                  ))}
                 </div>
 
                 <div className="pt-2 border-t border-slate-800">
@@ -183,20 +225,14 @@ export function TradingForm({ symbol }: TradingFormProps) {
                 className="w-full mt-auto bg-green-600 hover:bg-green-700 text-white font-medium"
                 disabled={!buyAmount || buyTotal < 5}
               >
-                ซื้อ {pair.baseAsset}
+                ซื้อ {pair.base_asset}
               </Button>
             </form>
 
             {/* Sell Form */}
             <form onSubmit={handleSell} className="flex flex-col">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-slate-300">ขาย {pair.baseAsset}</span>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>ยอดคงเหลือ:</span>
-                  <span className="text-slate-300 font-mono">
-                    {user?.balance[pair.baseAsset]?.toFixed(5) || "0"} {pair.baseAsset}
-                  </span>
-                </div>
+                <span className="text-sm font-medium text-slate-300">ขาย {pair.base_asset}</span>
               </div>
 
               <div className="flex gap-1 mb-3">
@@ -255,28 +291,9 @@ export function TradingForm({ symbol }: TradingFormProps) {
                       required
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">
-                      {pair.baseAsset}
+                      {pair.base_asset}
                     </span>
                   </div>
-                </div>
-
-                <div className="flex gap-1">
-                  {[25, 50, 75, 100].map((percent) => (
-                    <Button
-                      key={percent}
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="flex-1 text-xs bg-slate-800 hover:bg-slate-700"
-                      onClick={() => {
-                        const available = user?.balance[pair.baseAsset] || 0
-                        const amount = available * (percent / 100)
-                        setSellAmount(amount.toFixed(5))
-                      }}
-                    >
-                      {percent}%
-                    </Button>
-                  ))}
                 </div>
 
                 <div className="pt-2 border-t border-slate-800">
@@ -295,7 +312,7 @@ export function TradingForm({ symbol }: TradingFormProps) {
                 className="w-full mt-auto bg-red-600 hover:bg-red-700 text-white font-medium"
                 disabled={!sellAmount || sellTotal < 5}
               >
-                ขาย {pair.baseAsset}
+                ขาย {pair.base_asset}
               </Button>
             </form>
           </div>

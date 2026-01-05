@@ -1,0 +1,230 @@
+[
+  {
+    "name": "trading_pairs",
+    "type": "base",
+    "schema": [
+      {
+        "name": "symbol",
+        "type": "text",
+        "required": true,
+        "unique": true
+      },
+      {
+        "name": "base_asset",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "quote_asset",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "last_price",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "price_change",
+        "type": "number"
+      },
+      {
+        "name": "price_change_percent",
+        "type": "number"
+      },
+      {
+        "name": "volume_24h",
+        "type": "number"
+      },
+      {
+        "name": "high_24h",
+        "type": "number"
+      },
+      {
+        "name": "low_24h",
+        "type": "number"
+      },
+      {
+        "name": "is_active",
+        "type": "bool"
+      }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_symbol ON trading_pairs (symbol)"]
+  },
+  {
+    "name": "candles",
+    "type": "base",
+    "schema": [
+      {
+        "name": "symbol",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "timeframe",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "timestamp",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "open",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "high",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "low",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "close",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "volume",
+        "type": "number",
+        "required": true
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_candles_symbol ON candles (symbol)",
+      "CREATE INDEX idx_candles_timestamp ON candles (timestamp)",
+      "CREATE UNIQUE INDEX idx_candles_unique ON candles (symbol, timeframe, timestamp)"
+    ]
+  },
+  {
+    "name": "orders",
+    "type": "base",
+    "schema": [
+      {
+        "name": "symbol",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "side",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "type",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "price",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "amount",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "filled",
+        "type": "number"
+      },
+      {
+        "name": "status",
+        "type": "text"
+      },
+      {
+        "name": "user_id",
+        "type": "text"
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_orders_symbol ON orders (symbol)",
+      "CREATE INDEX idx_orders_status ON orders (status)",
+      "CREATE INDEX idx_orders_orderbook ON orders (symbol, status, side, price)"
+    ]
+  },
+  {
+    "name": "trades",
+    "type": "base",
+    "schema": [
+      {
+        "name": "symbol",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "price",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "amount",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "side",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "timestamp",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "buyer_order_id",
+        "type": "text"
+      },
+      {
+        "name": "seller_order_id",
+        "type": "text"
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_trades_symbol ON trades (symbol)",
+      "CREATE INDEX idx_trades_timestamp ON trades (timestamp)",
+      "CREATE INDEX idx_trades_symbol_time ON trades (symbol, timestamp)"
+    ]
+  },
+  {
+    "name": "tickers",
+    "type": "base",
+    "schema": [
+      {
+        "name": "symbol",
+        "type": "text",
+        "required": true,
+        "unique": true
+      },
+      {
+        "name": "bid_price",
+        "type": "number"
+      },
+      {
+        "name": "ask_price",
+        "type": "number"
+      },
+      {
+        "name": "last_price",
+        "type": "number"
+      },
+      {
+        "name": "volume_24h",
+        "type": "number"
+      },
+      {
+        "name": "updated_at",
+        "type": "number"
+      }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_tickers_symbol ON tickers (symbol)"]
+  }
+]

@@ -1,34 +1,43 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { generateRecentTrades, type Trade } from "@/lib/mock-data"
-import { tradingPairs } from "@/lib/mock-data"
+import { getPocketBase, type Trade } from "@/lib/pocketbase"
 
 interface MarketTradesProps {
   symbol: string
 }
 
 export function MarketTrades({ symbol }: MarketTradesProps) {
-  const pair = tradingPairs.find((p) => p.symbol === symbol) || tradingPairs[0]
   const [trades, setTrades] = useState<Trade[]>([])
 
   useEffect(() => {
-    // Initial data
-    setTrades(generateRecentTrades(pair.lastPrice))
+    const pb = getPocketBase()
 
-    // TODO: Replace with PocketBase real-time subscription
-    const interval = setInterval(() => {
-      const newTrade: Trade = {
-        price: pair.lastPrice * (1 + (Math.random() - 0.5) * 0.002),
-        amount: Math.random() * 0.1,
-        time: new Date().toLocaleTimeString("th-TH"),
-        isBuy: Math.random() > 0.5,
+    async function loadTrades() {
+      try {
+        const tradesList = await pb.collection("trades").getList<Trade>(1, 30, {
+          filter: `symbol="${symbol}"`,
+          sort: "-timestamp",
+        })
+        setTrades(tradesList.items)
+      } catch (error) {
+        console.error("[v0] Error loading trades:", error)
       }
-      setTrades((prev) => [newTrade, ...prev.slice(0, 29)])
-    }, 3000)
+    }
 
-    return () => clearInterval(interval)
-  }, [pair.lastPrice, symbol])
+    loadTrades()
+
+    pb.collection("trades").subscribe("*", (e) => {
+      const trade = e.record as Trade
+      if (trade.symbol === symbol && e.action === "create") {
+        setTrades((prev) => [trade, ...prev.slice(0, 29)])
+      }
+    })
+
+    return () => {
+      pb.collection("trades").unsubscribe("*")
+    }
+  }, [symbol])
 
   return (
     <div className="h-64 flex flex-col border-t border-slate-800 bg-slate-950">
@@ -44,15 +53,24 @@ export function MarketTrades({ symbol }: MarketTradesProps) {
 
       <div className="flex-1 overflow-y-auto">
         {trades.map((trade, index) => (
-          <div key={index} className="grid grid-cols-3 gap-2 px-3 py-1 text-xs hover:bg-slate-800/30 transition-colors">
-            <div className={`text-left font-mono ${trade.isBuy ? "text-green-500" : "text-red-500"}`}>
+          <div
+            key={trade.id || index}
+            className="grid grid-cols-3 gap-2 px-3 py-1 text-xs hover:bg-slate-800/30 transition-colors"
+          >
+            <div className={`text-left font-mono ${trade.side === "BUY" ? "text-green-500" : "text-red-500"}`}>
               {trade.price.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </div>
             <div className="text-right text-slate-300 font-mono">{trade.amount.toFixed(5)}</div>
-            <div className="text-right text-slate-400">{trade.time}</div>
+            <div className="text-right text-slate-400">
+              {new Date(trade.timestamp).toLocaleTimeString("th-TH", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </div>
           </div>
         ))}
       </div>

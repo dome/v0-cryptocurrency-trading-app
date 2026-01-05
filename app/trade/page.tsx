@@ -1,8 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { getCurrentUser } from "@/lib/auth"
+import { useState } from "react"
 import { Navigation } from "@/components/trading/navigation"
 import { PriceTicker } from "@/components/trading/price-ticker"
 import { OrderBook } from "@/components/trading/order-book"
@@ -12,15 +10,7 @@ import { TradingForm } from "@/components/trading/trading-form"
 import { MarketPairs } from "@/components/trading/market-pairs"
 
 export default function TradePage() {
-  const router = useRouter()
   const [selectedPair, setSelectedPair] = useState("BTCUSDT")
-
-  useEffect(() => {
-    const user = getCurrentUser()
-    if (!user) {
-      router.push("/login")
-    }
-  }, [router])
 
   return (
     <div className="h-screen flex flex-col bg-slate-900">
