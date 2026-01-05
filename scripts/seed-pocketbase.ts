@@ -22,12 +22,12 @@ const tradingPairs = [
     symbol: "BTCUSDT",
     base_asset: "BTC",
     quote_asset: "USDT",
-    last_price: 91499.99,
+    last_price: 70000.99,
     price_change: 1988.65,
     price_change_percent: 2.22,
     volume_24h: 796267987.56,
-    high_24h: 91800.0,
-    low_24h: 89420.75,
+    high_24h: 71800.0,
+    low_24h: 69420.75,
     is_active: true,
   },
   {
@@ -69,13 +69,26 @@ const tradingPairs = [
 ]
 
 // สร้างข้อมูล candles สำหรับกราฟ
-function generateCandles(symbol: string, basePrice: number, count = 100) {
+function generateCandles(symbol: string, basePrice: number, timeframe: string, count = 100) {
   const candles = []
   const now = Date.now()
   let currentPrice = basePrice
+  
+  // กำหนดช่วงเวลาตาม timeframe
+  const timeframeMs = {
+    "1m": 1 * 60 * 1000,        // 1 minute
+    "5m": 5 * 60 * 1000,        // 5 minutes
+    "15m": 15 * 60 * 1000,      // 15 minutes
+    "1h": 60 * 60 * 1000,       // 1 hour
+    "4h": 4 * 60 * 60 * 1000,   // 4 hours
+    "1D": 24 * 60 * 60 * 1000,  // 1 day
+    "1W": 7 * 24 * 60 * 60 * 1000 // 1 week
+  }
+  
+  const interval = timeframeMs[timeframe as keyof typeof timeframeMs] || 15 * 60 * 1000
 
   for (let i = count; i >= 0; i--) {
-    const timestamp = now - i * 15 * 60 * 1000 // 15 minutes interval
+    const timestamp = now - i * interval
     const open = currentPrice
     const change = (Math.random() - 0.5) * basePrice * 0.02
     const close = open + change
@@ -85,7 +98,7 @@ function generateCandles(symbol: string, basePrice: number, count = 100) {
 
     candles.push({
       symbol,
-      timeframe: "15m",
+      timeframe,
       timestamp,
       open,
       high,
@@ -193,18 +206,24 @@ async function seedDatabase() {
       }
     }
 
-    // 2. สร้างข้อมูล candles สำหรับแต่ละคู่
+    // 2. สร้างข้อมูล candles สำหรับแต่ละคู่และทุก timeframe
     console.log("\n📈 กำลังสร้างข้อมูลแท่งเทียน...")
+    const timeframes = ["1m", "5m", "15m", "1h", "4h", "1D", "1W"]
     for (const pair of tradingPairs) {
-      const candles = generateCandles(pair.symbol, pair.last_price)
-      for (const candle of candles) {
-        try {
-          await pb.collection("candles").create(candle)
-        } catch (error: any) {
-          // Skip duplicates
+      let totalCandles = 0
+      for (const tf of timeframes) {
+        const candleCount = tf === "1D" ? 30 : tf === "1W" ? 20 : 100 // สำหรับรายวันให้สร้าง 30 วัน, รายสัปดาห์ 20 สัปดาห์
+        const candles = generateCandles(pair.symbol, pair.last_price, tf, candleCount)
+        for (const candle of candles) {
+          try {
+            await pb.collection("candles").create(candle)
+          } catch (error: any) {
+            // Skip duplicates
+          }
         }
+        totalCandles += candles.length
       }
-      console.log(`✅ สร้างข้อมูล candles สำหรับ ${pair.symbol} จำนวน ${candles.length} แท่ง`)
+      console.log(`✅ สร้างข้อมูล candles สำหรับ ${pair.symbol} จำนวน ${totalCandles} แท่ง (ทุก timeframe)`)
     }
 
     // 3. สร้างข้อมูล orders (order book)
