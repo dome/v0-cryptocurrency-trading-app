@@ -47,7 +47,43 @@ export function TradingViewChart({ symbol, timeframe, candles }: TradingViewChar
     }
   }, [])
 
-  // Component will be completed in next task
+  useEffect(() => {
+    if (!chartRef.current || candles.length === 0) return
+
+    const chart = chartRef.current
+
+    // Remove existing series if any
+    if (seriesRef.current) {
+      chart.removeSeries(seriesRef.current)
+    }
+
+    // Add candlestick series
+    const series = chart.addCandlestickSeries({
+      upColor: "#22c55e",
+      downColor: "#ef4444",
+      borderVisible: false,
+      wickUpColor: "#22c55e",
+      wickDownColor: "#ef4444",
+    })
+
+    seriesRef.current = series
+
+    // Transform v0 candle format to TradingView format
+    const chartData = candles.map((c) => ({
+      time: c.timestamp as any,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume || 0,
+    }))
+
+    // Set data
+    series.setData(chartData)
+
+    // Fit content
+    chart.timeScale().fitContent()
+  }, [candles])
 
   return (
     <div className="w-full h-full">
