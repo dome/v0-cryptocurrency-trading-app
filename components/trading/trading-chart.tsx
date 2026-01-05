@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { getPocketBase, type Candle, type TradingPair } from "@/lib/pocketbase"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, BarChart3 } from "lucide-react"
+import { TrendingUp, BarChart3, CandlestickChart } from "lucide-react"
 import { TradingViewChart } from "./TradingViewChart"
 
 interface TradingChartProps {
@@ -96,6 +96,14 @@ export function TradingChart({ symbol }: TradingChartProps) {
           >
             <TrendingUp className="h-3 w-3 mr-1" />
             Line
+          </Button>
+          <Button
+            variant={chartType === "tradingview" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setChartType("tradingview")}
+            className={chartType === "tradingview" ? "bg-cyan-500 hover:bg-cyan-600" : "hover:bg-slate-800"}
+          >
+            <CandlestickChart className="h-4 w-4" />
           </Button>
         </div>
 
