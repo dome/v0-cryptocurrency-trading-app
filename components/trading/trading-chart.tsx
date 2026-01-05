@@ -5,6 +5,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContai
 import { getPocketBase, type Candle, type TradingPair } from "@/lib/pocketbase"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, BarChart3 } from "lucide-react"
+import { TradingViewChart } from "./TradingViewChart"
 
 interface TradingChartProps {
   symbol: string
@@ -14,7 +15,7 @@ export function TradingChart({ symbol }: TradingChartProps) {
   const [chartData, setChartData] = useState<Candle[]>([])
   const [pair, setPair] = useState<TradingPair | null>(null)
   const [timeframe, setTimeframe] = useState("15m")
-  const [chartType, setChartType] = useState<"candlestick" | "line">("candlestick")
+  const [chartType, setChartType] = useState<"candlestick" | "line" | "tradingview">("candlestick")
 
   useEffect(() => {
     const pb = getPocketBase()
