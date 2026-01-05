@@ -85,6 +85,31 @@ export function TradingViewChart({ symbol, timeframe, candles }: TradingViewChar
     chart.timeScale().fitContent()
   }, [candles])
 
+  useEffect(() => {
+    if (!chartRef.current) return
+
+    const chart = chartRef.current
+
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        })
+      }
+    }
+
+    // Initial resize
+    handleResize()
+
+    // Add resize listener
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [])
+
   return (
     <div className="w-full h-full">
       <div ref={chartContainerRef} className="w-full h-[400px]" />
