@@ -169,8 +169,16 @@ export function TradingChart({ symbol }: TradingChartProps) {
 
       {/* Chart */}
       <div className="flex-1 p-4">
-        <ResponsiveContainer width="100%" height="100%">
-          {chartType === "line" ? (
+        {chartType === "tradingview" ? (
+          <div className="h-[400px]">
+            <TradingViewChart
+              symbol={symbol}
+              timeframe={timeframe}
+              candles={chartData}
+            />
+          </div>
+        ) : chartType === "line" ? (
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartDisplayData}>
               <XAxis
                 dataKey="time"
@@ -197,7 +205,9 @@ export function TradingChart({ symbol }: TradingChartProps) {
               />
               <Line type="monotone" dataKey="price" stroke="#f59e0b" strokeWidth={2} dot={false} />
             </LineChart>
-          ) : (
+          </ResponsiveContainer>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartDisplayData}>
               <XAxis
                 dataKey="time"
@@ -224,8 +234,8 @@ export function TradingChart({ symbol }: TradingChartProps) {
               />
               <Bar dataKey="price" />
             </BarChart>
-          )}
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Volume Chart */}
