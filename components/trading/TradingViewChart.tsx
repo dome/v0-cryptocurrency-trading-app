@@ -42,6 +42,7 @@ export function TradingViewChart({ symbol, timeframe, candles }: TradingViewChar
 
     // Cleanup on unmount
     return () => {
+      seriesRef.current = null
       chart.remove()
       chartRef.current = null
     }
@@ -54,7 +55,7 @@ export function TradingViewChart({ symbol, timeframe, candles }: TradingViewChar
     if (!chart) return
 
     // Remove existing series if any
-    if (seriesRef.current) {
+    if (seriesRef.current && chartRef.current) {
       try {
         chart.removeSeries(seriesRef.current)
       } catch (error) {
