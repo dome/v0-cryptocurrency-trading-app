@@ -170,7 +170,7 @@ export function TradingChart({ symbol }: TradingChartProps) {
       {/* Chart */}
       <div className="flex-1 p-4">
         {chartType === "tradingview" ? (
-          <div className="h-[400px]">
+          <div className="h-full">
             <TradingViewChart
               symbol={symbol}
               timeframe={timeframe}

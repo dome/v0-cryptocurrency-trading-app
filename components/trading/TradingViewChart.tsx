@@ -51,10 +51,16 @@ export function TradingViewChart({ symbol, timeframe, candles }: TradingViewChar
     if (!chartRef.current || candles.length === 0) return
 
     const chart = chartRef.current
+    if (!chart) return
 
     // Remove existing series if any
     if (seriesRef.current) {
-      chart.removeSeries(seriesRef.current)
+      try {
+        chart.removeSeries(seriesRef.current)
+      } catch (error) {
+        console.error("Error removing series:", error)
+      }
+      seriesRef.current = null
     }
 
     // Add candlestick series
@@ -113,11 +119,11 @@ export function TradingViewChart({ symbol, timeframe, candles }: TradingViewChar
   return (
     <div className="w-full h-full">
       {candles.length === 0 ? (
-        <div className="flex items-center justify-center h-[400px] text-slate-400">
+        <div className="flex items-center justify-center h-full text-slate-400">
           No data available
         </div>
       ) : (
-        <div ref={chartContainerRef} className="w-full h-[400px]" />
+        <div ref={chartContainerRef} className="w-full h-full" />
       )}
     </div>
   )
